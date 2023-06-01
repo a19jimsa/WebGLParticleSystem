@@ -137,14 +137,9 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
       gl.vertexAttribPointer(colorAttributeLocation, 3, gl.FLOAT, false, 0, 0);
       gl.vertexAttribDivisor(colorAttributeLocation, 1);
-      draw();
 
-      function draw() {
-        console.log(Math.floor(performance.now() / 1000));
-        // Använd shadersprogrammet
-        gl.useProgram(program);
-        let i = 0;
-        for (i; i < particlePositions.length; i += 2) {
+      function update() {
+        for (let i = 0; i < particlePositions.length; i += 2) {
           let dx = 0,
             dy = 0,
             dist = 0;
@@ -153,8 +148,23 @@
           dist = Math.sqrt(dx * dx + dy * dy);
           particleVelocity[i] += dx / dist; // Gravitational force
           particleVelocity[i + 1] += dy / dist;
-          particlePositions[i] += particleVelocity[i] * 0.0001; // Euler integration
-          particlePositions[i + 1] += particleVelocity[i + 1] * 0.0001;
+          particlePositions[i] += particleVelocity[i] * 0.001; // Euler integration
+          particlePositions[i + 1] += particleVelocity[i + 1] * 0.001;
+        }
+      }
+
+      let previous = performance.now();
+      let lag = 0.0;
+      const UPDATE_PER_MS = 1000 / 20;
+      function draw() {
+        const current = performance.now();
+        const elapsed = current - previous;
+        previous = current;
+        lag += elapsed;
+        while (lag >= UPDATE_PER_MS) {
+          update();
+
+          lag -= UPDATE_PER_MS;
         }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, particlePositionBuffer);
@@ -163,14 +173,20 @@
           0,
           new Float32Array(particlePositions)
         );
+        console.log(Math.floor(performance.now() / 1000));
+        // Använd shadersprogrammet
+        gl.useProgram(program);
+
         resizeCanvasToDisplaySize(gl.canvas);
         // Rensa canvasen och rita partiklarna
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArraysInstanced(gl.POINTS, 0, 1, particlePositions.length / 2);
-        window.requestAnimationFrame(draw);
+
+        requestAnimationFrame(draw);
       }
+
       function getRandomFloat(min, max) {
         return Math.random() * (max - min) + min;
       }
@@ -199,6 +215,7 @@
         shaderX = (x + 1.0) * canvas.clientWidth * 0.5;
         shaderY = (1.0 - y) * canvas.clientHeight * 0.5;
       }
+      draw();
     </script>
   </body>
 </html>
